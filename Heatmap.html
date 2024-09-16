@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire Weather Trends Map</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            pointer-events: none;
+            font-size: 14px;
+        }
+        .legend {
+            font-size: 12px;
+            fill: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>Fire Weather Trends in the U.S. (1973-2023)</h1>
+    <div id="map"></div>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+
+    <script>
+        const width = 960;
+        const height = 600;
+
+        const svg = d3.select("#map")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const projection = d3.geoAlbersUsa()
+            .scale(1000)
+            .translate([width / 2, height / 2]);
+
+        const path = d3.geoPath()
+            .projection(projection);
+
+        const color = d3.scaleThreshold()
+            .domain([-56, -28, -14, -7, -1, 1, 7, 14, 28, 56])
+            .range(d3.schemeRdYlBu[10]);
+
+        // Tooltip setup
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+        // Load data
+        Promise.all([
+            d3.json('path_to_climdivs.json'),  // Climate division geometry data
+            d3.json('path_to_fire_weather_data.json')  // Fire weather data
+        ]).then(([climdivs, fireWeatherData]) => {
+            const climateDivisions = topojson.feature(climdivs, climdivs.objects.climate_divisions).features;
+
+            // Map drawing
+            svg.append("g")
+                .selectAll("path")
+                .data(climateDivisions)
+                .enter().append("path")
+                .attr("d", path)
+                .attr("fill", d => {
+                    const divisionData = fireWeatherData.find(f => f.division === d.id);
+                    return divisionData ? color(divisionData.fireWxDaysChange) : "#ccc";
+                })
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 0.5)
+                .on("mouseover", function (event, d) {
+                    const divisionData = fireWeatherData.find(f => f.division === d.id);
+                    if (divisionData) {
+                        tooltip.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                        tooltip.html(`
+                            <strong>Division:</strong> ${d.properties.name}<br>
+                            <strong>Change in Fire Weather Days:</strong> ${divisionData.fireWxDaysChange}
+                        `)
+                            .style("left", (event.pageX + 5) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    }
+                })
+                .on("mouseout", function () {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                });
+
+            // Add legend
+            const legend = svg.append("g")
+                .attr("class", "legend")
+                .attr("transform", "translate(20, 30)");
+
+            const legendData = color.range().map(d => {
+                const r = color.invertExtent(d);
+                return [r[0], r[1]];
+            });
+
+            legend.selectAll("rect")
+                .data(legendData)
+                .enter().append("rect")
+                .attr("x", 0)
+                .attr("y", (d, i) => i * 20)
+                .attr("width", 20)
+                .attr("height", 20)
+                .attr("fill", d => color(d[0]));
+
+            legend.selectAll("text")
+                .data(legendData)
+                .enter().append("text")
+                .attr("x", 25)
+                .attr("y", (d, i) => i * 20 + 15)
+                .text(d => `${d[0]} to ${d[1]}`);
+        }).catch(error => {
+            console.error("Error loading data: ", error);
+        });
+    </script>
+</body>
+</html>

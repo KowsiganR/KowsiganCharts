@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Employee Journey: Categorization of Experiences</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f7;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #333;
+        }
+
+        #chart {
+            width: 60%;
+            max-width: 600px;
+            height: auto;
+            margin-bottom: 40px;
+        }
+
+        #details {
+            text-align: center;
+            max-width: 600px;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 24px;
+            color: #444;
+        }
+
+        p {
+            font-size: 18px;
+            margin-top: 10px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>The Employee Journey: Categorization of Experiences</h1>
+    <div id="chart"></div>
+    <div id="details">
+        <h2>Experience Category Details</h2>
+        <p id="category-info">Hover over a segment to see details.</p>
+    </div>
+
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script>
+        const data = {
+            name: "Experiences",
+            children: [
+                { name: "Positive Experiences", value: 25 },
+                { name: "Direct Contact with HR", value: 16 },
+                { name: "Mention of Tamara", value: 9 },
+                { name: "Mention of Specific Processes", value: 22 },
+                { name: "Feedback and Response", value: 13 },
+                { name: "Variation in Experiences", value: 11 },
+                { name: "Referral", value: 4 }
+            ]
+        };
+
+        const width = 600;
+        const height = 600;
+        const radius = Math.min(width, height) / 2;
+
+        const arc = d3.arc()
+            .outerRadius(radius - 20)
+            .innerRadius(100);
+
+        const pie = d3.pie()
+            .sort(null)
+            .value(d => d.value);
+
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", `translate(${width / 2},${height / 2})`);
+
+        const color = d3.scaleOrdinal()
+            .range(["#FF5733", "#33FF57", "#3357FF", "#FF33A8", "#33FFF3", "#FFC733", "#DA33FF"]);
+
+        const path = svg.selectAll("path")
+            .data(pie(data.children))
+            .enter().append("path")
+            .attr("d", arc)
+            .attr("fill", d => color(d.data.name))
+            .style("opacity", 0.8)
+            .on("mouseover", function (event, d) {
+                d3.select("#category-info")
+                    .text(`${d.data.name}: ${d.data.value}%`);
+                d3.select(this)
+                    .transition()
+                    .duration(300)
+                    .style("opacity", 1)
+                    .attr("transform", function(d) {
+                        const [x, y] = arc.centroid(d);
+                        return `translate(${x * 0.1}, ${y * 0.1})`;
+                    })
+                    .attr("stroke", "#333")
+                    .attr("stroke-width", "2px");
+            })
+            .on("mouseout", function () {
+                d3.select("#category-info")
+                    .text("Hover over a segment to see details.");
+                d3.select(this)
+                    .transition()
+                    .duration(300)
+                    .style("opacity", 0.8)
+                    .attr("transform", "translate(0,0)")
+                    .attr("stroke", "none");
+            });
+
+        svg.selectAll("text")
+            .data(pie(data.children))
+            .enter().append("text")
+            .attr("transform", d => `translate(${arc.centroid(d)})`)
+            .attr("dy", "0.35em")
+            .attr("text-anchor", "middle")
+            .text(d => d.data.name)
+            .style("fill", "#fff")
+            .style("font-size", "12px")
+            .style("font-weight", "bold")
+            .style("opacity", 0)
+            .transition()
+            .delay((d, i) => i * 300)
+            .duration(500)
+            .style("opacity", 1);
+    </script>
+
+</body>
+</html>

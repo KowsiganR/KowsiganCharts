@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotated Word Cloud</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.5/d3.layout.cloud.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        .word-cloud {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f4f4f4;
+        }
+        .word {
+            font-family: 'Arial', sans-serif;
+            font-weight: bold;
+            fill: #333;
+            transition: transform 0.3s ease, fill 0.3s ease;
+        }
+        .word:hover {
+            transform: scale(1.2);
+            fill: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="word-cloud" id="word-cloud"></div>
+    <script>
+        // Sample data: words and their frequencies
+        const data = [
+            {text: "D3.js", size: 50},
+            {text: "Word Cloud", size: 40},
+            {text: "Visualization", size: 30},
+            {text: "JavaScript", size: 25},
+            {text: "Data", size: 20},
+            {text: "Chart", size: 15},
+            {text: "HTML", size: 10},
+            {text: "CSS", size: 8}
+        ];
+
+        // Dimensions of the word cloud
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        // Create the SVG container
+        const svg = d3.select("#word-cloud").append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Define the color scale
+        const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+        // Create the word cloud layout
+        const layout = d3.layout.cloud()
+            .size([width, height])
+            .words(data.map(d => ({text: d.text, size: d.size})))
+            .padding(5)
+            .rotate(() => Math.random() > 0.5 ? 0 : 90)  // Randomly rotate between 0 and 90 degrees
+            .fontSize(d => d.size)
+            .on("end", draw);
+
+        // Start the layout process
+        layout.start();
+
+        function draw(words) {
+            svg.append("g")
+                .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")")
+                .selectAll("text")
+                .data(words)
+                .enter().append("text")
+                .style("font-size", d => d.size + "px")
+                .style("fill", (d, i) => color(i))
+                .attr("text-anchor", "middle")
+                .attr("transform", d => "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")")  // Apply rotation
+                .text(d => d.text)
+                .style("opacity", 0)  // Start with opacity 0
+                .transition()  // Fade-in animation
+                .duration(1000)
+                .style("opacity", 1);
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight;
+            svg.attr("width", newWidth)
+                .attr("height", newHeight);
+            layout.size([newWidth, newHeight]);
+            layout.start();
+        });
+    </script>
+</body>
+</html>

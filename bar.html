@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Visualization: Employee Journey</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #e0e0e0;
+        }
+
+        #dashboard {
+            width: 90%;
+            max-width: 1200px;
+            padding: 20px;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #chart {
+            width: 100%;
+            max-width: 800px;
+            height: 500px;
+            margin-bottom: 40px;
+        }
+
+        #details {
+            text-align: center;
+            max-width: 800px;
+            margin-top: 20px;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 24px;
+            color: #e0e0e0;
+        }
+
+        p {
+            font-size: 18px;
+            margin-top: 10px;
+            color: #b0b0b0;
+        }
+
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .bar {
+            fill-opacity: 0.8;
+            transition: fill-opacity 0.3s ease;
+        }
+
+        .bar:hover {
+            fill-opacity: 1;
+        }
+
+        .label {
+            font-size: 14px;
+            fill: #fff;
+            text-anchor: middle;
+        }
+    </style>
+</head>
+<body>
+    <div id="dashboard">
+        <h1>The Employee Journey: Bar Chart of Experiences</h1>
+        <div id="chart"></div>
+        <div id="details">
+            <h2>Experience Category Details</h2>
+            <p id="category-info">Hover over a bar to see details.</p>
+        </div>
+        <div class="button-container">
+            <button id="downloadBtn" class="button">Download Image</button>
+        </div>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        const data = [
+            { name: "Positive Experiences", value: 25 },
+            { name: "Direct Contact with HR", value: 16 },
+            { name: "Mention of Tamara", value: 9 },
+            { name: "Mention of Specific Processes", value: 22 },
+            { name: "Feedback and Response", value: 13 },
+            { name: "Variation in Experiences", value: 11 },
+            { name: "Referral", value: 4 }
+        ];
+
+        const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+        const width = document.querySelector('#chart').offsetWidth - margin.left - margin.right;
+        const height = 500 - margin.top - margin.bottom;
+
+        const svg = d3.select("#chart").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleBand()
+            .domain(data.map(d => d.name))
+            .range([0, width])
+            .padding(0.1);
+
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.value)])
+            .nice()
+            .range([height, 0]);
+
+        svg.selectAll(".bar")
+            .data(data)
+            .enter().append("rect")
+            .attr("class", "bar")
+            .attr("x", d => x(d.name))
+            .attr("y", d => y(d.value))
+            .attr("width", x.bandwidth())
+            .attr("height", d => height - y(d.value))
+            .attr("fill", "#007bff")
+            .on("mouseover", function (event, d) {
+                d3.select("#category-info")
+                    .text(`${d.name}: ${d.value}`);
+                d3.select(this)
+                    .transition()
+                    .duration(300)
+                    .attr("fill", "#0056b3");
+            })
+            .on("mouseout", function () {
+                d3.select("#category-info")
+                    .text("Hover over a bar to see details.");
+                d3.select(this)
+                    .transition()
+                    .duration(300)
+                    .attr("fill", "#007bff");
+            });
+
+        svg.selectAll(".label")
+            .data(data)
+            .enter().append("text")
+            .attr("class", "label")
+            .attr("x", d => x(d.name) + x.bandwidth() / 2)
+            .attr("y", d => y(d.value) - 5)
+            .text(d => d.value)
+            .style("font-size", "14px")
+            .style("font-weight", "bold");
+
+        svg.append("g")
+            .attr("class", "x-axis")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x))
+            .selectAll("text")
+            .style("font-size", "12px")
+            .style("fill", "#e0e0e0");
+
+        svg.append("g")
+            .attr("class", "y-axis")
+            .call(d3.axisLeft(y))
+            .selectAll("text")
+            .style("font-size", "12px")
+            .style("fill", "#e0e0e0");
+
+        // Download Image Function
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            const svgElement = document.querySelector('#chart svg');
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'bar-chart.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>

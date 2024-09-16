@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Visualization: Employee Journey</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #e0e0e0;
+        }
+
+        #dashboard {
+            width: 90%;
+            max-width: 1300px;
+            padding: 30px;
+            background-color: #1e1e1e;
+            border-radius: 15px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #chart {
+            width: 100%;
+            max-width: 850px;
+            height: 600px;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        #details {
+            text-align: center;
+            max-width: 850px;
+            margin-top: 20px;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 28px;
+            color: #e0e0e0;
+        }
+
+        p {
+            font-size: 18px;
+            margin-top: 10px;
+            color: #b0b0b0;
+        }
+
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .arc {
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+
+        .arc:hover {
+            opacity: 0.9;
+        }
+
+        .label {
+            font-size: 16px;
+            font-weight: bold;
+            fill: #000; /* Ensure black text inside the circle */
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none; /* Prevent text from interfering with mouse events */
+        }
+
+        /* Tooltip styling */
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            visibility: hidden;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="dashboard">
+        <h1>The Employee Journey: 3D Pie Chart of Experiences</h1>
+        <div id="chart"></div>
+        <div id="details">
+            <h2>Experience Category Details</h2>
+            <p id="category-info">Hover over a segment to see details.</p>
+        </div>
+        <div class="button-container">
+            <button id="downloadBtn" class="button">Download Image</button>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        const data = {
+            name: "Experiences",
+            children: [
+                { name: "Positive Experiences", value: 25 },
+                { name: "Direct Contact with HR", value: 16 },
+                { name: "Mention of Tamara", value: 9 },
+                { name: "Mention of Specific Processes", value: 22 },
+                { name: "Feedback and Response", value: 13 },
+                { name: "Variation in Experiences", value: 11 },
+                { name: "Referral", value: 4 }
+            ]
+        };
+
+        const width = document.querySelector('#chart').offsetWidth;
+        const height = 600;
+        const radius = Math.min(width, height) / 2;
+
+        const arc = d3.arc()
+            .outerRadius(radius - 10)
+            .innerRadius(80);  // Inner radius for donut effect
+
+        const pie = d3.pie()
+            .sort(null)
+            .value(d => d.value);
+
+        const svg = d3.select("#chart").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", `translate(${width / 2},${height / 2})`);
+
+        const color = d3.scaleOrdinal()
+            .range(["#3498DB", "#2ECC71", "#F39C12", "#E74C3C", "#9B59B6", "#1ABC9C", "#E67E22"]);
+
+        // Draw arcs with entry animation and 3D effect
+        const slices = svg.selectAll(".arc")
+            .data(pie(data.children))
+            .enter().append("g")
+            .attr("class", "arc");
+
+        slices.append("path")
+            .attr("fill", d => color(d.data.name))
+            .attr("class", "arc")
+            .attr("d", arc)
+            .each(function(d) { this._current = d; })
+            .transition()
+            .duration(1000)  // Entry animation
+            .attrTween("d", function(d) {
+                const i = d3.interpolate({ startAngle: 0, endAngle: 0 }, d);
+                return function(t) {
+                    return arc(i(t));
+                };
+            });
+
+        // Tooltip and hover effects
+        const tooltip = d3.select("#tooltip");
+
+        slices.selectAll("path")
+            .on("mouseover", function (event, d) {
+                d3.select("#category-info")
+                    .text(`${d.data.name}: ${d.data.value}%`);
+                tooltip
+                    .style("visibility", "visible")
+                    .text(`${d.data.name}: ${d.data.value}%`);
+                d3.select(this)
+                    .transition()
+                    .duration(300)
+                    .style('opacity', 0.9)
+                    .attr("transform", "scale(1.1)")
+                    .style("filter", "drop-shadow(4px 4px 10px rgba(0,0,0,0.5))");
+            })
+            .on("mousemove", function (event) {
+                tooltip
+                    .style("top", `${event.pageY - 30}px`)
+                    .style("left", `${event.pageX + 15}px`);
+            })
+            .on("mouseout", function () {
+                d3.select("#category-info")
+                    .text("Hover over a segment to see details.");
+                tooltip.style("visibility", "hidden");
+                d3.select(this)
+                    .transition()
+                    .duration(300)
+                    .style('opacity', 1)
+                    .attr("transform", "scale(1)")
+                    .style("filter", "none");
+            });
+
+        slices.append("text")
+            .attr("transform", function(d) { return `translate(${arc.centroid(d)})`; })
+            .attr("dy", "0.35em")
+            .attr("class", "label")
+            .text(d => `${d.data.value}%`)
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .style("fill", "#000");  // Ensure black text inside the circle
+
+        // Download Image Function
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            const svgElement = document.querySelector('#chart svg');
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pie-chart.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
